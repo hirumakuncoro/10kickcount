@@ -5,7 +5,6 @@ import { feedback } from '../device/feedback'
 
 export function useTodaySession() {
   const [session, setSession] = useState<d.Session | null>(null)
-  const [now, setNow] = useState(Date.now())
   const active = session?.status === 'active'
 
   const commit = useCallback(async (next: d.Session) => {
@@ -23,15 +22,33 @@ export function useTodaySession() {
     })
   }, [])
 
-  // timer + selesai otomatis 2 jam
+  // selesai otomatis 2 jam
   useEffect(() => {
     if (!session || !active) return
-    const id = setInterval(() => {
-      setNow(Date.now())
-      const settled = d.settle(session)
-      if (settled !== session) commit(settled)
-    }, 1_000)
-    return () => clearInterval(id)
+
+    const remaining = d.LIMIT_MS - (Date.now() - session.startedAt)
+    if (remaining <= 0) {
+      commit(d.settle(session))
+      return
+    }
+
+    const id = setTimeout(() => {
+      commit(d.settle(session))
+    }, remaining)
+
+    // Handle visibility changes in case device slept through timeout
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        const settled = d.settle(session)
+        if (settled !== session) commit(settled)
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [session, active, commit])
 
   // layar tetap menyala selama sesi
@@ -47,30 +64,42 @@ export function useTodaySession() {
     }
   }, [active])
 
+  const start = useCallback(() => {
+    if (session?.date === d.todayKey()) return
+    feedback.tap()
+    commit(d.newSession())
+  }, [session?.date, commit])
+
+  const press = useCallback(() => {
+    if (!session) return
+    const next = d.tap(session)
+    if (next === session) return
+    if (next.status === 'active') {
+      next.kicks.length >= d.TARGET ? feedback.complete() : feedback.tap()
+    }
+    commit(next)
+  }, [session, commit])
+
+  const undo = useCallback(() => {
+    if (session) commit(d.undo(session))
+  }, [session, commit])
+
+  const confirm = useCallback(() => {
+    if (session) commit(d.confirmDone(session))
+  }, [session, commit])
+
+  const remove = useCallback(async () => {
+    if (session) await sessionStore.remove(session.date)
+    setSession(null)
+  }, [session?.date])
+
   return {
     session,
-    elapsedMs: session ? now - session.startedAt : 0,
     askConfirm: !!session && d.needsConfirm(session),
-
-    start: () => {
-      if (session?.date === d.todayKey()) return // 1 sesi/hari: hapus dulu kalau mau ulang
-      feedback.tap()
-      commit(d.newSession())
-    },
-    press: () => {
-      if (!session) return
-      const next = d.tap(session)
-      if (next === session) return
-      if (next.status === 'active') {
-        next.kicks.length >= d.TARGET ? feedback.complete() : feedback.tap()
-      }
-      commit(next)
-    },
-    undo: () => session && commit(d.undo(session)),
-    confirm: () => session && commit(d.confirmDone(session)),
-    remove: async () => {
-      if (session) await sessionStore.remove(session.date)
-      setSession(null)
-    },
+    start,
+    press,
+    undo,
+    confirm,
+    remove,
   }
 }
