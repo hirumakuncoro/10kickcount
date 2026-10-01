@@ -12,14 +12,16 @@ export default defineConfig({
       manifest: {
         name: 'Baby Kick Count',
         short_name: 'KickCount',
+        lang: 'id',
         start_url: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#ffffff',
+        background_color: '#0f1115',
+        theme_color: '#0f1115',
         icons: [
+          { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
       },
       devOptions: { enabled: true }, // opsional: SW aktif di dev
