@@ -1,11 +1,29 @@
-interface Props { onNo: () => void; onYes: () => void }
+interface Props {
+  title: string
+  onNo: () => void
+  onYes: () => void
+}
 
-export function ConfirmSheet({ onNo, onYes }: Props) {
+export function ConfirmSheet({ title, onNo, onYes }: Props) {
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onNo()
+    }
+  }
+
   return (
-    <div role="dialog" aria-label="Selesai?" className="confirm-sheet">
-      <p>Selesai?</p>
-      <button onClick={onNo}>Belum</button>
-      <button onClick={onYes}>Ya</button>
+    <div className="sheet-overlay" onClick={handleOverlayClick}>
+      <div role="dialog" aria-label={title} className="sheet-content">
+        <h3>{title}</h3>
+        <div className="sheet-actions">
+          <button className="btn-secondary" onClick={onNo}>
+            Batal
+          </button>
+          <button className="btn-primary" onClick={onYes}>
+            Ya
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

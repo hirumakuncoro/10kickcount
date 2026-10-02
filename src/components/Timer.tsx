@@ -15,5 +15,5 @@ export function Timer({ startedAt, limitMs }: Props) {
   }, [])
 
   const elapsed = Math.min(now - startedAt, limitMs)
-  return <time>{formatDuration(elapsed)}</time>
+  return <div className="timer">{formatDuration(elapsed)}</div>
 }
