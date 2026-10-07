@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
-import { TARGET } from '../domain/session'
+import { TARGET, LIMIT_MS } from '../domain/session'
 import { useHistorySessions } from '../hooks/useHistorySessions'
 import { formatDuration } from '../lib/format'
 
@@ -16,21 +16,44 @@ function dayLabel(dateStr: string) {
   return DAY_LABELS[day]
 }
 
+function durationMin(startedAt: number, endedAt: number | undefined): string {
+  if (!endedAt) return '—'
+  const mins = Math.round((endedAt - startedAt) / 60000)
+  return `${mins}m`
+}
+
+function barOpacity(startedAt: number, endedAt: number | undefined): number {
+  if (!endedAt) return 1
+  return Math.max(0.35, 1 - ((endedAt - startedAt) / LIMIT_MS) * 0.65)
+}
+
 const BAR_W = 28
 const BAR_GAP = 8
 const CHART_H = 160
-const LABEL_H = 32
+const LABEL_H = 44
 const SVG_H = CHART_H + LABEL_H
 
 interface Props {
   onBack: () => void
 }
 
+function PageHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <header>
+      <div>
+        <button className="history-back" onClick={onBack} aria-label="Kembali">
+          <ArrowLeft size={20} />
+        </button>
+        Riwayat
+      </div>
+    </header>
+  )
+}
+
 export function HistoryPage({ onBack }: Props) {
   const { sessions, loading } = useHistorySessions()
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // scroll ke kanan (data terbaru) saat load
   useEffect(() => {
     if (!loading && scrollRef.current) {
       scrollRef.current.scrollLeft = scrollRef.current.scrollWidth
@@ -40,17 +63,8 @@ export function HistoryPage({ onBack }: Props) {
   if (loading) {
     return (
       <>
-        <header>
-          <div>
-            <button className="history-back" onClick={onBack} aria-label="Kembali">
-              <ArrowLeft size={20} />
-            </button>
-            Riwayat
-          </div>
-        </header>
-        <main>
-          <p style={{ color: 'var(--fg-dim)' }}>Memuat...</p>
-        </main>
+        <PageHeader onBack={onBack} />
+        <main><p style={{ color: 'var(--fg-dim)' }}>Memuat...</p></main>
       </>
     )
   }
@@ -58,14 +72,7 @@ export function HistoryPage({ onBack }: Props) {
   if (sessions.length === 0) {
     return (
       <>
-        <header>
-          <div>
-            <button className="history-back" onClick={onBack} aria-label="Kembali">
-              <ArrowLeft size={20} />
-            </button>
-            Riwayat
-          </div>
-        </header>
+        <PageHeader onBack={onBack} />
         <main>
           <p style={{ color: 'var(--fg-dim)', lineHeight: 1.6 }}>
             Belum ada sesi tercatat.<br />Mulai rekam dari halaman utama.
@@ -80,21 +87,11 @@ export function HistoryPage({ onBack }: Props) {
 
   return (
     <>
-      <header>
-        <div>
-          <button className="history-back" onClick={onBack} aria-label="Kembali">
-            <ArrowLeft size={20} />
-          </button>
-          Riwayat
-        </div>
-      </header>
+      <PageHeader onBack={onBack} />
 
       <main className="history-main">
-        <p className="history-subtitle">
-          {sessions.length} sesi tercatat
-        </p>
+        <p className="history-subtitle">{sessions.length} sesi tercatat</p>
 
-        {/* Chart */}
         <div className="history-chart-wrap" ref={scrollRef}>
           <svg
             width={svgW}
@@ -105,8 +102,7 @@ export function HistoryPage({ onBack }: Props) {
           >
             {/* garis target */}
             <line
-              x1={0}
-              x2={svgW}
+              x1={0} x2={svgW}
               y1={CHART_H - (TARGET / maxKicks) * CHART_H}
               y2={CHART_H - (TARGET / maxKicks) * CHART_H}
               stroke="var(--border)"
@@ -120,46 +116,49 @@ export function HistoryPage({ onBack }: Props) {
               const y = CHART_H - barH
               const reached = s.kicks.length >= TARGET
               const labelX = x + BAR_W / 2
+              const opacity = reached ? barOpacity(s.startedAt, s.endedAt) : 1
 
               return (
                 <g key={s.date}>
                   <rect
-                    x={x}
-                    y={y}
-                    width={BAR_W}
-                    height={barH}
+                    x={x} y={y}
+                    width={BAR_W} height={barH}
                     rx={4}
                     fill={reached ? 'var(--accent)' : 'var(--ring-bg)'}
+                    opacity={opacity}
                   />
                   {/* jumlah kicks di atas bar */}
                   <text
-                    x={labelX}
-                    y={y - 4}
-                    textAnchor="middle"
-                    fontSize={10}
+                    x={labelX} y={y - 4}
+                    textAnchor="middle" fontSize={10}
                     fill="var(--fg-dim)"
                   >
                     {s.kicks.length}
                   </text>
                   {/* tanggal */}
                   <text
-                    x={labelX}
-                    y={CHART_H + 14}
-                    textAnchor="middle"
-                    fontSize={10}
+                    x={labelX} y={CHART_H + 13}
+                    textAnchor="middle" fontSize={10}
                     fill="var(--fg-dim)"
                   >
                     {shortDate(s.date)}
                   </text>
                   {/* hari */}
                   <text
-                    x={labelX}
-                    y={CHART_H + 28}
-                    textAnchor="middle"
-                    fontSize={9}
+                    x={labelX} y={CHART_H + 25}
+                    textAnchor="middle" fontSize={9}
                     fill="var(--border)"
                   >
                     {dayLabel(s.date)}
+                  </text>
+                  {/* durasi */}
+                  <text
+                    x={labelX} y={CHART_H + 39}
+                    textAnchor="middle" fontSize={9}
+                    fill="var(--fg-dim)"
+                    opacity={0.7}
+                  >
+                    {durationMin(s.startedAt, s.endedAt)}
                   </text>
                 </g>
               )
@@ -177,8 +176,9 @@ export function HistoryPage({ onBack }: Props) {
             <span className="history-legend-dot history-legend-dot--dim" />
             Belum tercapai
           </span>
-          <span className="history-legend-item history-legend-dashed">
-            — Target
+          <span className="history-legend-item history-legend-dashed">— Target</span>
+          <span className="history-legend-item" style={{ color: 'var(--fg-dim)', fontSize: 11 }}>
+            Solid = lebih cepat
           </span>
         </div>
 
@@ -191,7 +191,7 @@ export function HistoryPage({ onBack }: Props) {
               <div key={s.date} className="history-row">
                 <div className="history-row-left">
                   <span className="history-row-date">{s.date}</span>
-                  <span className="history-row-duration" style={{ color: 'var(--fg-dim)' }}>
+                  <span className="history-row-duration">
                     {duration ? formatDuration(duration) : '—'}
                   </span>
                 </div>
