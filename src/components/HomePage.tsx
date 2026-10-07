@@ -7,12 +7,18 @@ import { formatDuration, formatTime } from '../lib/format'
 import { shareToWhatsApp } from '../lib/share'
 import { KickButton } from './KickButton'
 import { ConfirmSheet } from './ConfirmSheet'
+import { InfoSheet } from './InfoSheet'
 import { Timer } from './Timer'
 
-export function HomePage() {
+interface Props {
+  onNavigate: (page: 'home' | 'history') => void
+}
+
+export function HomePage({ onNavigate }: Props) {
   const s = useTodaySession()
   const { muted, toggleMuted } = usePreferences()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   const x = s.session
   const running = x?.status === 'active'
@@ -74,6 +80,13 @@ export function HomePage() {
             }}
           />
         ) : null}
+
+        {showInfo ? (
+          <InfoSheet
+            onClose={() => setShowInfo(false)}
+            onHistory={() => onNavigate('history')}
+          />
+        ) : null}
       </main>
 
       <footer>
@@ -81,9 +94,9 @@ export function HomePage() {
           <button onClick={toggleMuted} title={muted ? 'Hidupkan suara' : 'Matikan suara'} aria-label={muted ? 'Hidupkan suara' : 'Matikan suara'}>
             {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
           </button>
-          <a href="https://github.com/hirumakuncoro/10kickcount" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
+          <button onClick={() => setShowInfo(true)} title="Informasi" aria-label="Informasi">
             <Info size={24} />
-          </a>
+          </button>
           {running ? (
             <button className="btn-secondary" onClick={s.undo} title="Batalkan gerakan terakhir" aria-label="Undo">
               <RotateCcw size={20} />
