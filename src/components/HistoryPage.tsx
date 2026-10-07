@@ -166,22 +166,6 @@ export function HistoryPage({ onBack }: Props) {
           </svg>
         </div>
 
-        {/* Legend */}
-        <div className="history-legend">
-          <span className="history-legend-item">
-            <span className="history-legend-dot history-legend-dot--accent" />
-            Tercapai 10
-          </span>
-          <span className="history-legend-item">
-            <span className="history-legend-dot history-legend-dot--dim" />
-            Belum tercapai
-          </span>
-          <span className="history-legend-item history-legend-dashed">— Target</span>
-          <span className="history-legend-item" style={{ color: 'var(--fg-dim)', fontSize: 11 }}>
-            Solid = lebih cepat
-          </span>
-        </div>
-
         {/* Tabel ringkas */}
         <div className="history-list">
           {[...sessions].reverse().map(s => {
